@@ -1,10 +1,21 @@
 #!/bin/bash
+echo "Listening Ports:"
+echo "================"
 
-echo "Active Internet connections (only servers)"
-echo "Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name"
-netstat -tlnp | awk '/^tcp/ || /^udp/ {print $0}'
-echo ""
-echo "Active UNIX domain sockets (only servers)"
-echo "Proto RefCnt Flags       Type       State         I-Node   PID/Program name    Path"
-netstat -lxnp --unix | awk '{print $0}'
+listening_sockets=$(netstat -tlnp | awk '/^tcp/ || /^udp/ {print $4,$7}')
+
+while read -r socket; do
+ip_address=$(echo "$socket" | awk -F: '{print $1}')
+port=$(echo "$socket" | awk -F: '{print $2}')
+protocol=$(echo "$socket" | awk '{print $1}')
+
+pid=$(lsof -i "$protocol:$port" -sTCP:LISTEN -sUDP:LISTEN -nP | awk '!/PID/ {print $2}')
+program=$(lsof -i "$protocol:$port" -sTCP:LISTEN -sUDP:LISTEN -nP | awk '!/PID/ {print $1}')
+
+echo "Protocol: $protocol"
+echo "Port: $port"
+echo "PID: $pid"
+echo "Program: $program"
+echo "----------------"
+done <<< "$listening_sockets"
 
